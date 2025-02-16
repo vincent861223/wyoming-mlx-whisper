@@ -3,8 +3,6 @@ import argparse
 import asyncio
 import logging
 from functools import partial
-from pathlib import Path
-from typing import Optional
 
 from wyoming.info import AsrModel, AsrProgram, Attribution, Info
 from wyoming.server import AsyncServer
@@ -20,9 +18,9 @@ async def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--api",
-        required=True,
-        help="URL of whisper.cpp to use, http:// or https://",
+        "--model",
+        default="mlx-community/whisper-large-v3-turbo",
+        help="MLX whisper model to use",
     )
     parser.add_argument("--uri", required=True, help="unix:// or tcp://")
     parser.add_argument("--debug", action="store_true", help="Log DEBUG messages")
@@ -48,8 +46,7 @@ async def main() -> None:
                 name="whisper-cpp",
                 description="Faster Whisper transcription via its API",
                 attribution=Attribution(
-                    name="Michael Hansen",
-                    url="https://github.com/synesthesiam"
+                    name="Michael Hansen", url="https://github.com/synesthesiam"
                 ),
                 installed=True,
                 version=__version__,
@@ -59,7 +56,7 @@ async def main() -> None:
                         description="whisper.cpp",
                         attribution=Attribution(
                             name="rhasspy wyoming faster whisper",
-                            url="https://github.com/rhasspy/wyoming-faster-whisper"
+                            url="https://github.com/rhasspy/wyoming-faster-whisper",
                         ),
                         installed=True,
                         languages=WHISPER_LANGUAGES,
@@ -75,13 +72,7 @@ async def main() -> None:
     server = AsyncServer.from_uri(args.uri)
     _LOGGER.info("Ready")
     model_lock = asyncio.Lock()
-    await server.run(
-        partial(
-            WhisperAPIEventHandler,
-            wyoming_info,
-            args
-        )
-    )
+    await server.run(partial(WhisperAPIEventHandler, wyoming_info, args))
 
 
 # -----------------------------------------------------------------------------

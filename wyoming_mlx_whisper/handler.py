@@ -1,11 +1,12 @@
 """Event handler for clients of the server."""
 import argparse
-import httpx
 import logging
+import time
 import wave
-
 from io import BytesIO
 
+import librosa
+import mlx_whisper
 from wyoming.asr import Transcribe, Transcript
 from wyoming.audio import AudioChunk, AudioChunkConverter, AudioStop
 from wyoming.event import Event
@@ -28,6 +29,7 @@ class WhisperAPIEventHandler(AsyncEventHandler):
         super().__init__(*args, **kwargs)
 
         self.cli_args = cli_args
+        self._model = cli_args.model
         self.wyoming_info_event = wyoming_info.event()
         self.audio = bytes()
         self.audio_converter = AudioChunkConverter(
@@ -49,23 +51,19 @@ class WhisperAPIEventHandler(AsyncEventHandler):
 
         if AudioStop.is_type(event.type):
             _LOGGER.debug("Audio stopped")
-            async with httpx.AsyncClient() as client:
-                with BytesIO() as tmpfile:
-                    with wave.open(tmpfile, 'wb') as wavfile:
-                        wavfile.setparams((1, 2, 16000, 0, 'NONE', 'NONE'))
-                        wavfile.writeframes(self.audio)
-
-                        files = {
-                            "file": tmpfile.getvalue()
-                        }
-                        params = {
-                            "temperature": "0.0",
-                            "temperature_inc": "0.2",
-                            "response_format": "json"
-                        }
-                        r = await client.post(self.cli_args.api, files=files, params=params, timeout=120.0)
-                        #_LOGGER.debug(r.json())
-                        text = r.json()['text']
+            with BytesIO() as tmpfile:
+                with wave.open(tmpfile, "wb") as wavfile:
+                    wavfile.setparams((1, 2, 16000, 0, "NONE", "NONE"))
+                    wavfile.writeframes(self.audio)
+                    audio, sr = librosa.load(
+                        BytesIO(tmpfile.getvalue()), sr=16000, mono=True
+                    )
+                    start_time = time.time()
+                    text = mlx_whisper.transcribe(audio, path_or_hf_repo=self._model)[
+                        "text"
+                    ]
+                    end_time = time.time()
+            _LOGGER.debug(f"Speech recognition time: {end_time - start_time} seconds")
 
             _LOGGER.info(text)
 
