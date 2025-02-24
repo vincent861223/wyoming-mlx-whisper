@@ -5,6 +5,12 @@ for the [mlx-whisper](https://pypi.org/project/mlx-whisper) speech to text syste
 
 This runs `mlx-community/whisper-large-v3-turbo` by default, which gives a pretty good result and runs nearly real-time on a M1 Pro MacBook Pro.
 
+
+## Install dependencies
+```sh
+brew install ffmpeg
+```
+
 ## Running Wyoming MLX Whisper as service
 ### Install the service
 The Wyoming MLX Whisper server will start at tcp://localhost:7891 by default.
